@@ -1,0 +1,94 @@
+<script src="https://unpkg.com/xlsx@0.12.3/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/jszip.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+<script src="js/vfs_fonts.js"></script>
+
+<input id="excelFile" type="file">
+
+<script>
+    pdfMake.fonts = {
+        Roboto: {
+            normal: 'THSarabun.ttf',
+            bold: 'THSarabun.ttf',
+            italics: 'THSarabun.ttf',
+            bolditalics: 'THSarabun.ttf'
+        }
+    };
+
+    let docDefinition = {
+        content: [],
+        pageSize: 'A4',
+        styles: {
+            header: {
+                fontSize: 18,
+                bold: true
+            },
+            subheader: {
+                fontSize: 15,
+                bold: true
+            },
+            quote: {
+                italics: true
+            },
+            small: {
+                fontSize: 8
+            }
+        }
+    }
+
+    document.getElementById('excelFile').onchange = function(elm) {
+        let reader = new FileReader();
+        let file = elm.target.files[0];
+
+        reader.onload = function(e) {
+            let data = e.target.result;
+            let pages = [];
+
+            let workbook = XLSX.read(data, {
+                type: 'binary'
+            });
+
+            let sheetName = workbook.SheetNames[1];
+            let row_object = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+            row_object = JSON.parse(JSON.stringify(row_object).replace(/"\s+|\s+"/g, '"'))
+
+            row_object.forEach(element => {
+                // Header
+                pages.push({
+                    text: element[Object.keys(element)[2]] + " (" + element[Object.keys(element)[3]] + ")\n",
+                    style: 'header'
+                });
+
+                // Paragraph
+                Object.keys(element).forEach(function(key) {
+                    pages.push({
+                        text: key,
+                        style: 'subheader'
+                    }, {
+                        text: element[key],
+                        style: "quote"
+                    }, "\n")
+                });
+
+                // Page Break
+                pages.push({
+                    text: '',
+                    pageBreak: 'before',
+                    pageOrientation: 'portrait'
+                });
+
+            });
+
+            docDefinition.content = pages;
+            pdfMake.createPdf(docDefinition).open();
+
+        };
+
+        reader.onerror = function(ex) {
+            console.log(ex);
+        };
+
+        reader.readAsBinaryString(file);
+    };
+</script>
